@@ -5,9 +5,11 @@
  */
 
 module.exports = {
-  mode: 'spa', // or 'universal'
+  mode: 'universal', // or 'universal'
   head: {
     title: 'electron-desktop-recording-app'
+  },
+  generate: {
   },
   loading: false,
   plugins: [
@@ -30,6 +32,13 @@ module.exports = {
           error: '#b71c1c'
         }
       }
+    },
+    defaultAssets: {
+      font: true,
+      icons: 'md'
+    },
+    icons: {
+      iconfont: 'md'
     }
   }
 }
