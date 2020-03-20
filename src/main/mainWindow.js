@@ -29,7 +29,7 @@ ipcMain.on('pick::path', async (event, arg) => {
 })
 
 ipcMain.on('start::record', async () => {
-  mainWindow.minimize();
+ // mainWindow.minimize();
   const urlTransparent = [];
   const urlRecording = [];
   urlTransparent[0] = DEV_SERVER_URL + '/transparent';
@@ -57,22 +57,22 @@ ipcMain.on('start::record', async () => {
     ]
 );
 
-recordingWindow = window.create(
-  isDev,
-  urlRecording,
-  {width: 250, height: 120},
-  [{name: 'parent', value: mainWindow}],
-  [{name: 'setMenu', value: null}]
-);
+// recordingWindow = window.create(
+//   isDev,
+//   urlRecording,
+//   {width: 250, height: 120},
+//   [{name: 'parent', value: mainWindow}],
+//   [{name: 'setMenu', value: null}]
+// );
  
   
 });
 
 ipcMain.on('stop::record', (event, args) => {
   transparentWindow.close();
-  recordingWindow.close();
+  //recordingWindow.close();
   mainWindow.show();
-  event.send('video::finish');
+  //event.reply('video::finish');
 });
 
 

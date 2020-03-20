@@ -1,12 +1,20 @@
 const fs = require('fs')
 const { desktopCapturer, ipcRenderer } = require('electron')
 const axios = require('axios')
-let recorder; let blobs = []
 
-export function startRecord () {
+export default class recorderService { 
+  
+  constructor(userPath) {
+    this.userPath=userPath;
+    this.recorder=[];
+    this.blobs = [];
+  }
+
+ startRecord () {
   desktopCapturer.getSources({ types: ['window', 'screen'] })
     .then(async () => {
-      const stream = await navigator.webkitGetUserMedia({
+      try {
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
           mandatory: {
@@ -22,21 +30,26 @@ export function startRecord () {
           ideal: 200,
           max: 600
         }
-      }, handleStream, err => {
-        console.log('error', err)
       })
-    })
-    .catch(error => console.log(error))
+      this.handleStream(stream)
+    }
+    catch (e) {
+      console.error(e);
+    }     
+})
+.catch(error => console.log(error))
 }
-function handleStream (stream) {
-  recorder = new MediaRecorder(stream)
-  blobs = []
-  recorder.ondataavailable = function (event) {
-    blobs.push(event.data)
+
+ handleStream (stream) {
+  this.recorder = new MediaRecorder(stream)
+  let blobs1 = []
+  this.recorder.ondataavailable = function (event) {
+    blobs1.push(event.data)
   }
-  recorder.start()
+  this.blobs=blobs1;
+  this.recorder.start()
 }
-function toArrayBuffer (blob, cb) {
+ toArrayBuffer (blob, cb) {
   const fileReader = new FileReader()
   fileReader.onload = function () {
     const arrayBuffer = this.result
@@ -44,7 +57,7 @@ function toArrayBuffer (blob, cb) {
   }
   fileReader.readAsArrayBuffer(blob)
 }
-function toBuffer (ab) {
+ toBuffer (ab) {
   const buffer = Buffer.alloc(ab.byteLength)
   const arr = new Uint8Array(ab)
   for (let i = 0; i < arr.byteLength; i++) {
@@ -52,13 +65,18 @@ function toBuffer (ab) {
   }
   return buffer
 }
-export function stopRecord (userPath, saveOnline) {
-  recorder.onstop = () => {
-    this.toArrayBuffer(new Blob(blobs, { type: 'video/webm' }), chunk => {
+
+handleUserMediaError(e) {
+  console.error('handleUserMediaError', e);
+}
+
+ stopRecord ( saveOnline) {
+  this.recorder.onstop = () => {
+    this.toArrayBuffer(new Blob(this.blobs, { type: 'video/webm' }), chunk => {
       const buffer = this.toBuffer(chunk)
       const randomString = Math.random().toString(36).substring(7)
       const randomName = '/' + randomString + '-shot.webm'
-      const path = userPath + randomName
+      const path = this.userPath + randomName
       fs.writeFile(path, buffer, function (err) {
         if (!err) {
           console.log('Saved video: ' + path, 'do save online?', saveOnline)
@@ -96,5 +114,6 @@ export function stopRecord (userPath, saveOnline) {
       })
     })
   }
-  recorder.stop()
+ this.recorder.stop()
+}
 }
