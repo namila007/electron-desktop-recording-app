@@ -4,10 +4,14 @@ const axios = require('axios')
 
 export default class recorderService { 
   
-  constructor(userPath) {
-    this.userPath=userPath;
+  constructor(path) {
+    if (recorderService.singleton) {
+      return recorderService.singleton;
+    }
+    this._userPath=path;
     this.recorder=[];
     this.blobs = [];
+   return recorderService.singleton;
   }
 
  startRecord () {
@@ -42,11 +46,31 @@ export default class recorderService {
 
  handleStream (stream) {
   this.recorder = new MediaRecorder(stream)
-  let blobs1 = []
+  let blobs = []
   this.recorder.ondataavailable = function (event) {
-    blobs1.push(event.data)
+    console.log(event)
+    blobs.push(event.data)
   }
-  this.blobs=blobs1;
+  console.log(blobs) 
+
+ this.recorder.onstop = () => {
+   this.toArrayBuffer(new Blob(blobs, { type: 'video/webm' }), chunk => {
+     const buffer = this.toBuffer(chunk)
+     const randomString = Math.random().toString(36).substring(7)
+     const randomName = '/' + randomString + '-shot.webm'
+     const path = this._userPath + randomName
+     fs.writeFile(path, buffer, function (err) {
+       if (!err) {
+         console.log('Saved video: ' + path)
+        
+       } else {
+         alert('Failed to save video ' + err)
+       }
+     })
+   })
+ }
+
+
   this.recorder.start()
 }
  toArrayBuffer (blob, cb) {
@@ -71,49 +95,45 @@ handleUserMediaError(e) {
 }
 
  stopRecord ( saveOnline) {
-  this.recorder.onstop = () => {
-    this.toArrayBuffer(new Blob(this.blobs, { type: 'video/webm' }), chunk => {
-      const buffer = this.toBuffer(chunk)
-      const randomString = Math.random().toString(36).substring(7)
-      const randomName = '/' + randomString + '-shot.webm'
-      const path = this.userPath + randomName
-      fs.writeFile(path, buffer, function (err) {
-        if (!err) {
-          console.log('Saved video: ' + path, 'do save online?', saveOnline)
-          if (saveOnline) {
-            console.log('save online')
-            const buff = Buffer.from(buffer).toString('base64')
-            axios({
-              method: 'POST',
-              url: 'https://api.cloudinary.com/v1_1/dyqhomagf/upload',
-              data: {
-                upload_preset: 'bsfgxm61',
-                file: 'data:video/webm;base64,' + buff
-              },
-              uploadEventHandlers: {
-                progress (e) {
-                  console.log(e)
-                  if (e && e.total && e.loaded) {
-                    const progress = Math.floor(e.loaded / e.total * 100)
-                    ipcRenderer.send('upload::progress', progress)
-                  }
-                }
-              }
-            })
-              .then(function (res) {
-                console.log('Saved online', res.data.secure_url)
-                ipcRenderer.send('upload::finish', res.data.secure_url)
-              })
-              .catch(function (err) {
-                console.log('Error saving online', err)
-              })
+  if (saveOnline) {
+    console.log('save online')
+    const buff = Buffer.from(buffer).toString('base64')
+    axios({
+      method: 'POST',
+      url: 'https://api.cloudinary.com/v1_1/dyqhomagf/upload',
+      data: {
+        upload_preset: 'bsfgxm61',
+        file: 'data:video/webm;base64,' + buff
+      },
+      uploadEventHandlers: {
+        progress (e) {
+          console.log(e)
+          if (e && e.total && e.loaded) {
+            const progress = Math.floor(e.loaded / e.total * 100)
+            ipcRenderer.send('upload::progress', progress)
           }
-        } else {
-          alert('Failed to save video ' + err)
         }
-      })
+      }
     })
-  }
+      .then(function (res) {
+        console.log('Saved online', res.data.secure_url)
+        ipcRenderer.send('upload::finish', res.data.secure_url)
+      })
+      .catch(function (err) {
+        console.log('Error saving online', err)
+      })
+    }
  this.recorder.stop()
 }
+
+/**
+   * @param {string} userPath
+   */
+set userPath(Path) {
+  this._userPath = Path;
 }
+get userPath() {
+  return this.userPath;
+}
+}
+

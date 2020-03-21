@@ -36,7 +36,7 @@
 
 <script>
 const { ipcRenderer } = require("electron");
-import recoder from '../../main/services/recorder.js'
+import recorder from '../../main/services/recorder.js'
 let recorderInst;
 export default {
   data() {
@@ -53,7 +53,8 @@ export default {
     startCapture() {
      
      this.sbutton=false;
-     this.recorderInst = new recoder(this.path);
+     this.recorderInst= new recorder('');
+     this.recorderInst.userPath = this.savepath;
      this.recorderInst.startRecord();
       ipcRenderer.send("start::record",this.savepath);
     },
